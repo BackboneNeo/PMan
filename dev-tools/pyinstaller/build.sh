@@ -137,13 +137,12 @@ if [ "${INSTALL_DEPENDENCIES}" = "1" ]; then
   # A frozen bundle cannot be extended with pip afterwards, so the optional
   # extras that the wheels leave to the user are all built in.
   "${PYTHON}" -m pip install "${REPO_ROOT}/partcad[ai,lint]" "${SETUPTOOLS_BOUND}"
-  # This satisfies the `partcad==<version>` pin of `partcad-cli` with the local
-  # build rather than with the release on PyPI.
-  "${PYTHON}" -m pip install "${REPO_ROOT}/partcad-cli" "${SETUPTOOLS_BOUND}"
-  # The JSON-RPC service is the third executable in the bundle; installing it
-  # here from the checkout satisfies its `partcad==<version>` pin with the local
-  # build too.
+  # The JSON-RPC service (the bundle's third executable) is installed before
+  # partcad-cli: the CLI pins partcad-service-json-rpc, which is not on PyPI, so
+  # it must be satisfied from this checkout. Both pins (partcad, and the service)
+  # resolve to the local builds this way.
   "${PYTHON}" -m pip install "${REPO_ROOT}/partcad-service-json-rpc" "${SETUPTOOLS_BOUND}"
+  "${PYTHON}" -m pip install "${REPO_ROOT}/partcad-cli" "${SETUPTOOLS_BOUND}"
 fi
 
 ###############################################  OPENSCAD  ###################################################
