@@ -7,7 +7,14 @@ from allure_behave.hooks import (  # noqa: F401  # used by the commented-out rep
 )
 from behave.runner import Context
 
-from features.seed import SCENARIO_STATE_ROOT, ensure_seed, provision, release
+from features.seed import (
+    SCENARIO_STATE_ROOT,
+    ensure_seed,
+    provision,
+    prune_sandbox_venvs,
+    release,
+    sandbox_venvs,
+)
 
 # Caps on the thread pools the numeric stack creates when it is imported.
 #
@@ -67,6 +74,10 @@ def before_all(context: Context) -> None:
     # them find the marker already written and return immediately.
     context.seed_state_dir = ensure_seed(subprocess_env())
 
+    # What the shared sandbox looked like once seeding finished. Anything a
+    # scenario adds to it is removed again in after_scenario; see sandbox_venvs.
+    context.sandbox_baseline = sandbox_venvs() if context.seed_state_dir else set()
+
 
 def before_scenario(context: Context, scenario) -> None:
     if not hasattr(context, "env"):
@@ -99,3 +110,9 @@ def after_scenario(context: Context, scenario) -> None:
     if state_dir:
         release(state_dir)
         logging.debug("Removed scenario state directory: %s", state_dir)
+
+    # The sandbox is shared, so anything this scenario built inside it would
+    # otherwise outlive it and accumulate for the whole run.
+    baseline = getattr(context, "sandbox_baseline", None)
+    if baseline is not None:
+        prune_sandbox_venvs(baseline)
