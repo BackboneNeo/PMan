@@ -1,3 +1,4 @@
+partcad-utils==0.7.146
 cadquery-ocp==7.9.3.1.1
 ocpsvg==0.6.0
 build123d==0.11.1
