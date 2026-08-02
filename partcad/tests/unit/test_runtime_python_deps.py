@@ -19,6 +19,7 @@ from partcad.runtime_python import (
     PythonRuntime,
     clear_reassert,
     describe_exit_code,
+    get_force_reinstall_flags,
     get_guard_path,
     invalidate_dependent_guards,
     needs_reassert,
@@ -92,6 +93,16 @@ def test_reassert_is_cleared_once_satisfied(tmp_path):
     clear_reassert(str(tmp_path), sandbox_versions.CADQUERY_OCP)
 
     assert not needs_reassert(str(tmp_path), sandbox_versions.CADQUERY_OCP)
+
+
+def test_cadquery_ocp_reassert_does_not_reinstall_vtk_dependencies():
+    """VTK is installed explicitly and must survive the OCP reassert."""
+    assert get_force_reinstall_flags(sandbox_versions.CADQUERY_OCP, True) == [
+        "--force-reinstall",
+        "--no-deps",
+    ]
+    assert get_force_reinstall_flags(sandbox_versions.VTK, True) == ["--force-reinstall"]
+    assert get_force_reinstall_flags(sandbox_versions.CADQUERY_OCP, False) == []
 
 
 def test_unrelated_install_invalidates_nothing(tmp_path):

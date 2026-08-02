@@ -61,11 +61,22 @@ PIP_CONSTRAINTS = [
 # alone, so re-asserting cadquery-ocp over a novtk install is a no-op without
 # this.
 #
-# Deliberately without "--no-deps": the VTK-enabled OCP module is linked
-# against VTK, so it fails to load at all ("libvtkWrappingPythonCore*.so:
-# cannot open shared object file") unless the 'vtk' it depends on is installed
-# alongside it. Skipping deps trades one broken sandbox for another.
+# VTK is part of CADQUERY_REQUIREMENTS explicitly.  When cadquery-ocp is
+# re-asserted over cadquery-ocp-novtk, forcing all of its dependencies too can
+# leave vtk's distribution metadata in place while deleting extension modules
+# such as vtkCommonDataModel (pip uninstalls overlapping files in the wrong
+# order).  Re-assert only OCP itself; a normal first install still gets all
+# dependencies, and the controlled closure installs VTK separately.
 FORCE_REINSTALL_FLAGS = ["--force-reinstall"]
+
+
+def get_force_reinstall_flags(python_package: str, force: bool) -> list[str]:
+    if not force:
+        return []
+    flags = list(FORCE_REINSTALL_FLAGS)
+    if python_package == sandbox_versions.CADQUERY_OCP:
+        flags.append("--no-deps")
+    return flags
 
 
 def get_guard_path(path: str, python_package: str) -> str:
@@ -626,7 +637,7 @@ class PythonRuntime(runtime.Runtime):
                                     "install",
                                     *self.pip_install_flags,
                                     *self.get_constraints_flags(),
-                                    *(FORCE_REINSTALL_FLAGS if force else []),
+                                    *get_force_reinstall_flags(python_package, force),
                                     python_package,
                                 ],
                                 path=path,
@@ -660,7 +671,7 @@ class PythonRuntime(runtime.Runtime):
                             "install",
                             *self.pip_install_flags,
                             *self.get_constraints_flags(),
-                            *(FORCE_REINSTALL_FLAGS if force else []),
+                            *get_force_reinstall_flags(python_package, force),
                             python_package,
                         ],
                         path=path,
@@ -700,7 +711,7 @@ class PythonRuntime(runtime.Runtime):
                                     "install",
                                     *self.pip_install_flags,
                                     *self.get_constraints_flags(),
-                                    *(FORCE_REINSTALL_FLAGS if force else []),
+                                    *get_force_reinstall_flags(python_package, force),
                                     python_package,
                                 ],
                                 path=path,
@@ -736,7 +747,7 @@ class PythonRuntime(runtime.Runtime):
                             "install",
                             *self.pip_install_flags,
                             *self.get_constraints_flags(),
-                            *(FORCE_REINSTALL_FLAGS if force else []),
+                            *get_force_reinstall_flags(python_package, force),
                             python_package,
                         ],
                         path=path,
