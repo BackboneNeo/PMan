@@ -34,6 +34,8 @@ def _bare_runtime(path):
     """
     runtime = PythonRuntime.__new__(PythonRuntime)
     runtime.path = str(path)
+    runtime.exec_path = None
+    runtime.exec_name = "python"
     runtime.constraints_path = None
     return runtime
 
@@ -168,6 +170,30 @@ def test_existing_session_checks_its_own_dependency_guards(tmp_path):
     runtime.ensure_onced(sandbox_versions.VTK, session=session)
 
     assert session["dirty"] is True
+    assert session["use_venv"] is True
+
+
+def test_clean_existing_session_still_uses_its_venv(tmp_path):
+    """A clean v-env contains project-only packages such as sdf-fork."""
+    base = tmp_path / "sandbox"
+    session_path = base / "v-env-project"
+    session_path.mkdir(parents=True)
+    requirement = "sdf-fork"
+    pathlib.Path(get_guard_path(str(session_path), requirement)).touch()
+    runtime = _bare_runtime(base)
+    session = {
+        "name": "project",
+        "hash": "project",
+        "path": str(session_path),
+        "dirty": False,
+        "deps": [],
+    }
+
+    runtime.ensure_onced(requirement, session=session)
+
+    assert session["dirty"] is False
+    assert session["use_venv"] is True
+    assert runtime.get_venv_python_path(session=session) == str(session_path / "bin" / "python")
 
 
 def test_new_session_can_reuse_a_satisfied_base_sandbox(tmp_path):
@@ -188,6 +214,8 @@ def test_new_session_can_reuse_a_satisfied_base_sandbox(tmp_path):
     runtime.ensure_onced(requirement, session=session)
 
     assert session["dirty"] is False
+    assert session["use_venv"] is False
+    assert runtime.get_venv_python_path(session=session) == str(base / "bin" / "python")
 
 
 def test_get_constraints_flags_survives_unwritable_path(tmp_path, monkeypatch):

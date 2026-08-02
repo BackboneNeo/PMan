@@ -602,10 +602,20 @@ class PythonRuntime(runtime.Runtime):
         selected (notably on Windows enrichment renders).
         """
         session["deps"].append(python_package)
-        dependency_path = session["path"] if os.path.exists(session["path"]) else base_path
+        # ``dirty`` means that dependencies need to be installed.  It must not
+        # also decide which interpreter to run: a fully populated, existing
+        # v-env is clean but still has to be used (SDF is not in the base
+        # sandbox).  Adopt a v-env that another factory for this project may
+        # have created since this session dictionary was initialized.
+        if os.path.exists(session["path"]):
+            session["use_venv"] = True
+        else:
+            session.setdefault("use_venv", False)
+        dependency_path = session["path"] if session["use_venv"] else base_path
         guard_path = get_guard_path(dependency_path, python_package)
         if force or needs_reassert(dependency_path, python_package) or not os.path.exists(guard_path):
             session["dirty"] = True
+            session["use_venv"] = True
 
     def ensure(self, python_package, session=None, path=None, force=False):
         self.once()
@@ -805,7 +815,7 @@ class PythonRuntime(runtime.Runtime):
         use_venv = False
 
         if path is None:
-            if session is None or not session["dirty"]:
+            if session is None or not session.get("use_venv", session["dirty"]):
                 # Use the full interpreter path if known
                 if not self.exec_path is None:
                     return self.exec_path
@@ -839,6 +849,7 @@ class PythonRuntime(runtime.Runtime):
             "name": name,
             "hash": name_hash,
             "path": venv_path,
+            "use_venv": os.path.exists(venv_path),
             "dirty": False,
             "deps": [],
         }
