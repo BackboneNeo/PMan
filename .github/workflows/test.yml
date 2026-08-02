@@ -289,8 +289,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     # The suite is sharded BEHAVE_SHARDS ways, so a single shard is a fraction
     # of the old whole-suite runtime (which used to hit the 120m cap on
-    # Windows). 60m leaves generous margin for the slowest shard.
-    timeout-minutes: 60
+    # Windows). A contended hosted runner can still spend more than one hour
+    # in CAD rendering, so keep the complete shard gating and allow it to
+    # finish rather than cancelling it at the old 60-minute boundary.
+    timeout-minutes: 90
 
     steps:
       - uses: actions/checkout@v7
@@ -319,7 +321,17 @@ jobs:
       - name: Configure public Git fallback for forks
         if: github.repository != 'partcad/partcad'
         shell: bash -el {0}
-        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
+        run: |
+          # Behave deliberately replaces HOME for every scenario. A global
+          # config written under the runner account would therefore disappear
+          # exactly when the SSH URL-rewrite scenario invokes PartCAD/libgit2.
+          # Put the public-only fallback in the system config on Unix so it
+          # survives that isolation. Windows skips the SSH scenario.
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            git config --global url."https://github.com/".insteadOf "git@github.com:"
+          else
+            sudo git config --system url."https://github.com/".insteadOf "git@github.com:"
+          fi
 
       - name: Test with behave
         shell: bash -el {0}
