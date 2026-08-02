@@ -44,9 +44,12 @@ suite passes without it.
 CadQuery's source `setup.py` deliberately suppresses `install_requires` in a
 conda environment. Because PartCAD uses conda as the sandbox interpreter but
 installs the pinned source with pip, PMan explicitly installs the exact
-`runtype`, `multimethod`, and `casadi` versions needed by `import cadquery`.
-Keep those pins and the Git commit as one compatibility unit; validate them in
-a newly created sandbox rather than relying on an accumulated developer cache.
+`runtype`, `multimethod`, `casadi`, and VTK versions needed by
+`import cadquery`. VTK is explicit because per-package virtual environments
+can otherwise observe a satisfied base OCP guard without inheriting its
+`vtkmodules` package. Keep those pins and the Git commit as one compatibility
+unit; validate them in a newly created sandbox rather than relying on an
+accumulated developer cache.
 
 ## Downstream assembly-render compatibility
 

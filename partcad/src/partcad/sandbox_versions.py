@@ -40,6 +40,9 @@ CADQUERY_IMPORT_DEPENDENCIES = (
     "runtype==0.5.3",
     "multimethod==1.12",
     "casadi==3.7.2",
+    # cadquery-ocp declares this transitively, but a per-package venv can be
+    # populated from already-satisfied base guards and miss vtkmodules.
+    "vtk==9.6.2",
 )
 CADQUERY_REQUIREMENTS = (*CADQUERY_IMPORT_DEPENDENCIES, CADQUERY)
 OCP_TESSELLATE = "ocp-tessellate==3.4.1"
