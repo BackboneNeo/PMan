@@ -93,7 +93,9 @@ jobs:
   build-containers:
     name: "Build Docker Containers"
     runs-on: ubuntu-24.04
-    if: ${{ github.ref != 'refs/heads/devel' || startsWith(github.event.head_commit.message, 'Version updated') }}
+    if: >-
+      ${{ github.repository == 'partcad/partcad' &&
+          (github.ref != 'refs/heads/devel' || startsWith(github.event.head_commit.message, 'Version updated')) }}
     permissions:
       packages: write
     steps:
