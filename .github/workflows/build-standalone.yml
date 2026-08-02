@@ -289,6 +289,10 @@ jobs:
       # of the shipped bundle is not meaningful. `cd examples` so the local
       # package resolves as it does in test.yml.
       - name: Run the ${{ matrix.suite }} examples through the bundle
+        # Keep parity with test.yml: the mutable external //pub/examples
+        # collection still contains scripts for build123d APIs removed in
+        # 0.11. PMan's own //pub/examples/partcad suite remains fully gating.
+        continue-on-error: ${{ matrix.suite == 'All' }}
         shell: bash -el {0}
         run: |
           cd examples
