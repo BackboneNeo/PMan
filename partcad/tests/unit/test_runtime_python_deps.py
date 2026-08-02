@@ -139,6 +139,46 @@ def test_get_constraints_flags_is_cached(tmp_path):
     assert runtime.get_constraints_flags() == runtime.get_constraints_flags()
 
 
+def test_existing_session_checks_its_own_dependency_guards(tmp_path):
+    """A populated base sandbox must not mask a missing v-env dependency."""
+    base = tmp_path / "sandbox"
+    session_path = base / "v-env-project"
+    session_path.mkdir(parents=True)
+    pathlib.Path(get_guard_path(str(base), sandbox_versions.VTK)).touch()
+    runtime = _bare_runtime(base)
+    session = {
+        "name": "project",
+        "hash": "project",
+        "path": str(session_path),
+        "dirty": False,
+        "deps": [],
+    }
+
+    runtime.ensure_onced(sandbox_versions.VTK, session=session)
+
+    assert session["dirty"] is True
+
+
+def test_new_session_can_reuse_a_satisfied_base_sandbox(tmp_path):
+    """Do not create a v-env when the session path does not exist and base is ready."""
+    base = tmp_path / "sandbox"
+    base.mkdir()
+    requirement = sandbox_versions.VTK
+    pathlib.Path(get_guard_path(str(base), requirement)).touch()
+    runtime = _bare_runtime(base)
+    session = {
+        "name": "project",
+        "hash": "project",
+        "path": str(base / "v-env-project"),
+        "dirty": False,
+        "deps": [],
+    }
+
+    runtime.ensure_onced(requirement, session=session)
+
+    assert session["dirty"] is False
+
+
 def test_get_constraints_flags_survives_unwritable_path(tmp_path, monkeypatch):
     """A constraints file we cannot write must not break installs."""
     runtime = _bare_runtime(tmp_path / "sandbox")

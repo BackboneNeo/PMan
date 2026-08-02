@@ -580,6 +580,22 @@ class PythonRuntime(runtime.Runtime):
         exitcode, stdout, stderr = await super().run_async(cmd, stdin=stdin, cwd=cwd)
         return exitcode, stdout, stderr
 
+    def _register_session_dependency(self, python_package, session, base_path, force=False):
+        """Track a dependency against the interpreter a session will use.
+
+        Factories for one project share a deterministic v-env path, but each
+        factory gets a fresh session dictionary. Once that v-env exists, its
+        guards -- not the base sandbox guards -- determine whether it contains
+        a dependency. Otherwise an installed base ``vtk`` can hide a missing
+        session ``vtk`` and CadQuery then fails only when the reused v-env is
+        selected (notably on Windows enrichment renders).
+        """
+        session["deps"].append(python_package)
+        dependency_path = session["path"] if os.path.exists(session["path"]) else base_path
+        guard_path = get_guard_path(dependency_path, python_package)
+        if force or needs_reassert(dependency_path, python_package) or not os.path.exists(guard_path):
+            session["dirty"] = True
+
     def ensure(self, python_package, session=None, path=None, force=False):
         self.once()
         self.ensure_onced(python_package, session=session, path=path, force=force)
@@ -588,15 +604,11 @@ class PythonRuntime(runtime.Runtime):
         if path is None:
             path = self.path
 
-        guard_path = get_guard_path(path, python_package)
-        force = force or needs_reassert(path, python_package)
         if session:
-            # Add the dependency to the session dependencies
-            session["deps"].append(python_package)
-            if not os.path.exists(guard_path):
-                # Mark this session as needed if the dependency is not met by the runtime environment
-                session["dirty"] = True
+            self._register_session_dependency(python_package, session, path, force=force)
         else:
+            guard_path = get_guard_path(path, python_package)
+            force = force or needs_reassert(path, python_package)
             with self.sync_lock():
                 with self.sync_lock_install():
                     if not os.path.exists(guard_path):
@@ -628,15 +640,11 @@ class PythonRuntime(runtime.Runtime):
         if path is None:
             path = self.path
 
-        guard_path = get_guard_path(path, python_package)
-        force = force or needs_reassert(path, python_package)
         if session:
-            # Add the dependency to the session dependencies
-            session["deps"].append(python_package)
-            if not os.path.exists(guard_path):
-                # Mark this session as needed if the dependency is not met by the runtime environment
-                session["dirty"] = True
+            self._register_session_dependency(python_package, session, path, force=force)
         else:
+            guard_path = get_guard_path(path, python_package)
+            force = force or needs_reassert(path, python_package)
             if not os.path.exists(guard_path):
                 item = python_package
                 if item == "partcad":
@@ -670,15 +678,11 @@ class PythonRuntime(runtime.Runtime):
             path = self.path
 
         # TODO(clairbee): expire the guard file after a certain time
-        guard_path = get_guard_path(path, python_package)
-        force = force or needs_reassert(path, python_package)
         if session:
-            # Add the dependency to the session dependencies
-            session["deps"].append(python_package)
-            if not os.path.exists(guard_path):
-                # Mark this session as needed if the dependency is not met by the runtime environment
-                session["dirty"] = True
+            self._register_session_dependency(python_package, session, path, force=force)
         else:
+            guard_path = get_guard_path(path, python_package)
+            force = force or needs_reassert(path, python_package)
             async with self.async_lock():
                 with self.sync_lock_install():
                     if not os.path.exists(guard_path):
@@ -712,15 +716,11 @@ class PythonRuntime(runtime.Runtime):
 
         # TODO(clairbee): expire the guard file after a certain time
 
-        guard_path = get_guard_path(path, python_package)
-        force = force or needs_reassert(path, python_package)
         if session:
-            # Add the dependency to the session dependencies
-            session["deps"].append(python_package)
-            if not os.path.exists(guard_path):
-                # Mark this session as needed if the dependency is not met by the runtime environment
-                session["dirty"] = True
+            self._register_session_dependency(python_package, session, path, force=force)
         else:
+            guard_path = get_guard_path(path, python_package)
+            force = force or needs_reassert(path, python_package)
             if not os.path.exists(guard_path):
                 item = python_package
                 if item == "partcad":
