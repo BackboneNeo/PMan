@@ -42,10 +42,21 @@ def test_cad_pins_are_exact():
         sandbox_versions.OCPSVG,
         sandbox_versions.BUILD123D,
         sandbox_versions.OCP_TESSELLATE,
+        *sandbox_versions.CADQUERY_IMPORT_DEPENDENCIES,
     ):
         assert "==" in pin, pin
 
     assert re.search(r"@[0-9a-f]{40}$", sandbox_versions.CADQUERY), sandbox_versions.CADQUERY
+
+
+def test_cadquery_requirements_include_clean_conda_import_closure():
+    """A git CadQuery install in conda omits its own install_requires."""
+    assert sandbox_versions.CADQUERY_REQUIREMENTS == (
+        "runtype==0.5.3",
+        "multimethod==1.12",
+        "casadi==3.7.2",
+        sandbox_versions.CADQUERY,
+    )
 
 
 def test_default_python_version_is_supported():

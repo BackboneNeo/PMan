@@ -41,6 +41,13 @@ contract. Every upstream sync must check whether the distribution is published
 and replace the direct reference with the normal version pin once the complete
 suite passes without it.
 
+CadQuery's source `setup.py` deliberately suppresses `install_requires` in a
+conda environment. Because PartCAD uses conda as the sandbox interpreter but
+installs the pinned source with pip, PMan explicitly installs the exact
+`runtype`, `multimethod`, and `casadi` versions needed by `import cadquery`.
+Keep those pins and the Git commit as one compatibility unit; validate them in
+a newly created sandbox rather than relying on an accumulated developer cache.
+
 ## Downstream assembly-render compatibility
 
 The pinned renderer could pass a heterogeneous assembly compound to OCCT

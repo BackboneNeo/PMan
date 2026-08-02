@@ -31,6 +31,17 @@ CADQUERY = (
     "cadquery @ git+https://github.com/CadQuery/cadquery.git"
     "@fb4c6d41863aee270c46ab64397f0d2675e74be0"
 )
+# CadQuery's setup.py deliberately emits no install_requires while running in
+# a conda environment. PartCAD uses a lightweight conda sandbox and installs
+# CadQuery with pip, so a clean sandbox otherwise gets the package without the
+# dependencies required by ``import cadquery``. Keep that import closure
+# explicit and exact; optional visualization/NURBS dependencies remain lazy.
+CADQUERY_IMPORT_DEPENDENCIES = (
+    "runtype==0.5.3",
+    "multimethod==1.12",
+    "casadi==3.7.2",
+)
+CADQUERY_REQUIREMENTS = (*CADQUERY_IMPORT_DEPENDENCIES, CADQUERY)
 OCP_TESSELLATE = "ocp-tessellate==3.4.1"
 TYPING_EXTENSIONS = "typing_extensions==4.16.0"
 NLOPT = "nlopt==2.11.0"

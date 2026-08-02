@@ -290,7 +290,8 @@ class PythonRuntime(runtime.Runtime):
                     # MIN_PYTHON_VERSION_CADQUERY or newer, so they never look at
                     # a 3.10 sandbox in the first place.
                     if sandbox_versions.is_at_least(self.version, sandbox_versions.MIN_PYTHON_VERSION_CADQUERY):
-                        self.ensure_onced_locked(sandbox_versions.CADQUERY)
+                        for requirement in sandbox_versions.CADQUERY_REQUIREMENTS:
+                            self.ensure_onced_locked(requirement)
                     self.ensure_onced_locked(sandbox_versions.NUMPY)
                     self.ensure_onced_locked(sandbox_versions.TYPING_EXTENSIONS)
                     self.ensure_onced_locked(sandbox_versions.OCPSVG)
@@ -309,7 +310,8 @@ class PythonRuntime(runtime.Runtime):
                     await self.ensure_async_onced_locked(sandbox_versions.NLOPT)
                     # See the note in once(): CadQuery has no Python 3.10 release.
                     if sandbox_versions.is_at_least(self.version, sandbox_versions.MIN_PYTHON_VERSION_CADQUERY):
-                        await self.ensure_async_onced_locked(sandbox_versions.CADQUERY)
+                        for requirement in sandbox_versions.CADQUERY_REQUIREMENTS:
+                            await self.ensure_async_onced_locked(requirement)
                     await self.ensure_async_onced_locked(sandbox_versions.NUMPY)
                     await self.ensure_async_onced_locked(sandbox_versions.TYPING_EXTENSIONS)
                     await self.ensure_async_onced_locked(sandbox_versions.OCPSVG)

@@ -14,6 +14,9 @@ the upstream release notes and `.github/CHANGELOG.md`.
   images, plugin artifacts, and releases from being published by this fork.
 - Pinned sandbox CadQuery to the exact official `v2.8.0` Git commit because the
   tag exists but its distribution is not available from the package index.
+- Added the exact CadQuery import dependency closure to clean conda sandboxes;
+  CadQuery's source installer omits `install_requires` whenever `CONDA_PREFIX`
+  is present.
 - Extended the sandbox pin regression test to treat a 40-character Git commit
   reference as an exact dependency pin.
 - Preserved OCCT compound topology in the SVG/PNG wrapper and added a safe
