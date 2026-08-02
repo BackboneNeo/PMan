@@ -303,14 +303,23 @@ jobs:
 
       # For Windows only, use PowerShell to set the SSH agent service in the manual launch mode
       - name: Set SSH Agent Service to Manual
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && github.repository == 'partcad/partcad'
         run: Set-Service -Name ssh-agent -StartupType Manual
         shell: pwsh
 
       - name: Start SSH Agent
+        if: github.repository == 'partcad/partcad'
         uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY_RO }}
+
+      # Forks do not inherit upstream secrets. The SSH Behave scenario only
+      # reads a public repository, so preserve its URL-rewrite coverage while
+      # routing the resulting public clone back through authenticated HTTPS.
+      - name: Configure public Git fallback for forks
+        if: github.repository != 'partcad/partcad'
+        shell: bash -el {0}
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
 
       - name: Test with behave
         shell: bash -el {0}
