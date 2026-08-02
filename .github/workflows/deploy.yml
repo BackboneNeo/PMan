@@ -16,11 +16,13 @@ jobs:
   # interpreter, for users who have none. They are attached to the same GitHub
   # release as the wheels, which is where "install.sh" downloads them from.
   build-standalone:
+    if: github.repository == 'partcad/partcad'
     uses: ./.github/workflows/build-standalone.yml
 
   # Keep the "build" job identical to "python-build.yml".
   # TODO(clairbee): include "python-build.yml" instead
   build:
+    if: github.repository == 'partcad/partcad'
     strategy:
       fail-fast: false
       matrix:
@@ -90,6 +92,7 @@ jobs:
 
   publish-to-pypi:
     name: Publish to PyPI
+    if: github.repository == 'partcad/partcad'
     needs:
       - build
       # Deliberately blocking: a release that carries the wheels but not the

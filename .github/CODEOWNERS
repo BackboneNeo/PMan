@@ -1,0 +1,7 @@
+* @NeoUKR
+
+# Downstream governance and release controls always require owner review.
+/.backbone/ @NeoUKR
+/.github/workflows/ @NeoUKR
+/VERSION @NeoUKR
+/docs/downstream/ @NeoUKR

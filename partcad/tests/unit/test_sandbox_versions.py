@@ -5,6 +5,8 @@
 # Licensed under Apache License, Version 2.0.
 #
 
+import re
+
 import pytest
 
 from partcad import sandbox_versions
@@ -39,10 +41,11 @@ def test_cad_pins_are_exact():
         sandbox_versions.CADQUERY_OCP,
         sandbox_versions.OCPSVG,
         sandbox_versions.BUILD123D,
-        sandbox_versions.CADQUERY,
         sandbox_versions.OCP_TESSELLATE,
     ):
         assert "==" in pin, pin
+
+    assert re.search(r"@[0-9a-f]{40}$", sandbox_versions.CADQUERY), sandbox_versions.CADQUERY
 
 
 def test_default_python_version_is_supported():

@@ -24,7 +24,13 @@ with no Python traceback at all (see runtime_python.PIP_CONSTRAINTS).
 CADQUERY_OCP = "cadquery-ocp==7.9.3.1.1"
 OCPSVG = "ocpsvg==0.6.0"
 BUILD123D = "build123d==0.11.1"
-CADQUERY = "cadquery==2.8.0"
+# PMan downstream compatibility pin: CadQuery v2.8.0 exists upstream but is not
+# published to the configured package index. Install that exact official tag
+# commit so the intended Python 3.11 / OCP 7.9 contract remains unchanged.
+CADQUERY = (
+    "cadquery @ git+https://github.com/CadQuery/cadquery.git"
+    "@fb4c6d41863aee270c46ab64397f0d2675e74be0"
+)
 OCP_TESSELLATE = "ocp-tessellate==3.4.1"
 TYPING_EXTENSIONS = "typing_extensions==4.16.0"
 NLOPT = "nlopt==2.11.0"
@@ -74,7 +80,7 @@ GUARD_INVALIDATED_BY = {
 # One step ahead of the minimum PartCAD itself supports.
 DEFAULT_PYTHON_VERSION = "3.11"
 
-# cadquery 2.8 requires Python 3.11 or newer, so a package that asks for 3.10
+# CadQuery 2.8 requires Python 3.11 or newer, so a package that asks for 3.10
 # still has to be rendered on 3.11.
 MIN_PYTHON_VERSION_CADQUERY = "3.11"
 

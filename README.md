@@ -1,5 +1,13 @@
 # PartCAD <!-- omit in toc -->
 
+> [!IMPORTANT]
+> This repository is the BackboneNeo **PMan** downstream fork of
+> [`partcad/partcad`](https://github.com/partcad/partcad). It preserves the
+> upstream Python packages, `partcad`/`pc` CLI, and file formats. Downstream
+> governance and the pinned-upstream sync contract are documented in
+> [`docs/downstream/UPSTREAM.md`](docs/downstream/UPSTREAM.md); inherited
+> PartCAD publication workflows are disabled in this fork.
+
 [![License](https://github.com/partcad/partcad/blob/main/apache20.svg?raw=true)](./LICENSE.txt)
 
 [![CI on Linux, macOS and Windows](https://github.com/partcad/partcad/actions/workflows/test.yml/badge.svg?event=schedule)](https://github.com/partcad/partcad/actions/workflows/test.yml?query=event%3Aschedule)

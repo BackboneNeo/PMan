@@ -12,7 +12,33 @@ import platform
 import pytest
 import tempfile
 
+import build123d as b3d
+
 import partcad as pc
+from partcad.wrappers import wrapper_render_svg
+
+
+def test_render_wrapper_preserves_compound_topology():
+    """Assembly compounds must not be mislabeled as solids before projection."""
+    compound = b3d.Compound(
+        children=[
+            b3d.Box(1, 1, 1),
+            b3d.Pos(2, 0, 0) * b3d.Box(1, 1, 1),
+        ]
+    )
+
+    wrapped = wrapper_render_svg._wrap_render_shape(compound.wrapped)
+
+    assert isinstance(wrapped, b3d.Compound)
+    assert not isinstance(wrapped, b3d.Solid)
+
+    visible, hidden = wrapper_render_svg._project_render_shape(
+        wrapped,
+        viewport_origin=(5, -5, 5),
+        viewport_up=(0, 0, 1),
+    )
+    assert visible
+    assert isinstance(hidden, list)
 
 
 @pytest.mark.slow

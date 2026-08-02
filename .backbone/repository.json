@@ -1,0 +1,8 @@
+{
+  "$schema": "https://raw.githubusercontent.com/BackboneNeo/Infrastructure/main/schemas/repository.schema.json",
+  "schemaVersion": 2,
+  "organization": "BackboneNeo",
+  "repository": "PMan",
+  "role": "cad-platform",
+  "version": "0.1.0"
+}
