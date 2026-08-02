@@ -56,6 +56,7 @@ def test_cadquery_requirements_include_clean_conda_import_closure():
         "multimethod==1.12",
         "casadi==3.7.2",
         "vtk==9.6.2",
+        "ezdxf==1.4.4",
         sandbox_versions.CADQUERY,
     )
 

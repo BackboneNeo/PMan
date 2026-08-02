@@ -24,6 +24,7 @@ with no Python traceback at all (see runtime_python.PIP_CONSTRAINTS).
 CADQUERY_OCP = "cadquery-ocp==7.9.3.1.1"
 OCPSVG = "ocpsvg==0.6.0"
 BUILD123D = "build123d==0.11.1"
+EZDXF = "ezdxf==1.4.4"
 # PMan downstream compatibility pin: CadQuery v2.8.0 exists upstream but is not
 # published to the configured package index. Install that exact official tag
 # commit so the intended Python 3.11 / OCP 7.9 contract remains unchanged.
@@ -43,6 +44,7 @@ CADQUERY_IMPORT_DEPENDENCIES = (
     # cadquery-ocp declares this transitively, but a per-package venv can be
     # populated from already-satisfied base guards and miss vtkmodules.
     "vtk==9.6.2",
+    EZDXF,
 )
 CADQUERY_REQUIREMENTS = (*CADQUERY_IMPORT_DEPENDENCIES, CADQUERY)
 OCP_TESSELLATE = "ocp-tessellate==3.4.1"
@@ -71,7 +73,6 @@ SVGLIB = "svglib==1.5.1"
 REPORTLAB = "reportlab==4.4.3"
 RLPYCAIRO = "rlpycairo==0.3.0"
 SVGPATHTOOLS = "svgpathtools==1.7.2"
-EZDXF = "ezdxf==1.4.4"
 
 # Installing a package on the left overwrites files owned by the packages on
 # the right, so those have to be installed again afterwards -- forcibly, since
