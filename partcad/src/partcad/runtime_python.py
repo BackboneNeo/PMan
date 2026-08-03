@@ -61,11 +61,22 @@ PIP_CONSTRAINTS = [
 # alone, so re-asserting cadquery-ocp over a novtk install is a no-op without
 # this.
 #
-# Deliberately without "--no-deps": the VTK-enabled OCP module is linked
-# against VTK, so it fails to load at all ("libvtkWrappingPythonCore*.so:
-# cannot open shared object file") unless the 'vtk' it depends on is installed
-# alongside it. Skipping deps trades one broken sandbox for another.
+# VTK is part of CADQUERY_REQUIREMENTS explicitly.  When cadquery-ocp is
+# re-asserted over cadquery-ocp-novtk, forcing all of its dependencies too can
+# leave vtk's distribution metadata in place while deleting extension modules
+# such as vtkCommonDataModel (pip uninstalls overlapping files in the wrong
+# order).  Re-assert only OCP itself; a normal first install still gets all
+# dependencies, and the controlled closure installs VTK separately.
 FORCE_REINSTALL_FLAGS = ["--force-reinstall"]
+
+
+def get_force_reinstall_flags(python_package: str, force: bool) -> list[str]:
+    if not force:
+        return []
+    flags = list(FORCE_REINSTALL_FLAGS)
+    if python_package == sandbox_versions.CADQUERY_OCP:
+        flags.append("--no-deps")
+    return flags
 
 
 def get_guard_path(path: str, python_package: str) -> str:
@@ -290,7 +301,8 @@ class PythonRuntime(runtime.Runtime):
                     # MIN_PYTHON_VERSION_CADQUERY or newer, so they never look at
                     # a 3.10 sandbox in the first place.
                     if sandbox_versions.is_at_least(self.version, sandbox_versions.MIN_PYTHON_VERSION_CADQUERY):
-                        self.ensure_onced_locked(sandbox_versions.CADQUERY)
+                        for requirement in sandbox_versions.CADQUERY_REQUIREMENTS:
+                            self.ensure_onced_locked(requirement)
                     self.ensure_onced_locked(sandbox_versions.NUMPY)
                     self.ensure_onced_locked(sandbox_versions.TYPING_EXTENSIONS)
                     self.ensure_onced_locked(sandbox_versions.OCPSVG)
@@ -309,7 +321,8 @@ class PythonRuntime(runtime.Runtime):
                     await self.ensure_async_onced_locked(sandbox_versions.NLOPT)
                     # See the note in once(): CadQuery has no Python 3.10 release.
                     if sandbox_versions.is_at_least(self.version, sandbox_versions.MIN_PYTHON_VERSION_CADQUERY):
-                        await self.ensure_async_onced_locked(sandbox_versions.CADQUERY)
+                        for requirement in sandbox_versions.CADQUERY_REQUIREMENTS:
+                            await self.ensure_async_onced_locked(requirement)
                     await self.ensure_async_onced_locked(sandbox_versions.NUMPY)
                     await self.ensure_async_onced_locked(sandbox_versions.TYPING_EXTENSIONS)
                     await self.ensure_async_onced_locked(sandbox_versions.OCPSVG)
@@ -578,6 +591,32 @@ class PythonRuntime(runtime.Runtime):
         exitcode, stdout, stderr = await super().run_async(cmd, stdin=stdin, cwd=cwd)
         return exitcode, stdout, stderr
 
+    def _register_session_dependency(self, python_package, session, base_path, force=False):
+        """Track a dependency against the interpreter a session will use.
+
+        Factories for one project share a deterministic v-env path, but each
+        factory gets a fresh session dictionary. Once that v-env exists, its
+        guards -- not the base sandbox guards -- determine whether it contains
+        a dependency. Otherwise an installed base ``vtk`` can hide a missing
+        session ``vtk`` and CadQuery then fails only when the reused v-env is
+        selected (notably on Windows enrichment renders).
+        """
+        session["deps"].append(python_package)
+        # ``dirty`` means that dependencies need to be installed.  It must not
+        # also decide which interpreter to run: a fully populated, existing
+        # v-env is clean but still has to be used (SDF is not in the base
+        # sandbox).  Adopt a v-env that another factory for this project may
+        # have created since this session dictionary was initialized.
+        if os.path.exists(session["path"]):
+            session["use_venv"] = True
+        else:
+            session.setdefault("use_venv", False)
+        dependency_path = session["path"] if session["use_venv"] else base_path
+        guard_path = get_guard_path(dependency_path, python_package)
+        if force or needs_reassert(dependency_path, python_package) or not os.path.exists(guard_path):
+            session["dirty"] = True
+            session["use_venv"] = True
+
     def ensure(self, python_package, session=None, path=None, force=False):
         self.once()
         self.ensure_onced(python_package, session=session, path=path, force=force)
@@ -586,15 +625,11 @@ class PythonRuntime(runtime.Runtime):
         if path is None:
             path = self.path
 
-        guard_path = get_guard_path(path, python_package)
-        force = force or needs_reassert(path, python_package)
         if session:
-            # Add the dependency to the session dependencies
-            session["deps"].append(python_package)
-            if not os.path.exists(guard_path):
-                # Mark this session as needed if the dependency is not met by the runtime environment
-                session["dirty"] = True
+            self._register_session_dependency(python_package, session, path, force=force)
         else:
+            guard_path = get_guard_path(path, python_package)
+            force = force or needs_reassert(path, python_package)
             with self.sync_lock():
                 with self.sync_lock_install():
                     if not os.path.exists(guard_path):
@@ -612,7 +647,7 @@ class PythonRuntime(runtime.Runtime):
                                     "install",
                                     *self.pip_install_flags,
                                     *self.get_constraints_flags(),
-                                    *(FORCE_REINSTALL_FLAGS if force else []),
+                                    *get_force_reinstall_flags(python_package, force),
                                     python_package,
                                 ],
                                 path=path,
@@ -626,15 +661,11 @@ class PythonRuntime(runtime.Runtime):
         if path is None:
             path = self.path
 
-        guard_path = get_guard_path(path, python_package)
-        force = force or needs_reassert(path, python_package)
         if session:
-            # Add the dependency to the session dependencies
-            session["deps"].append(python_package)
-            if not os.path.exists(guard_path):
-                # Mark this session as needed if the dependency is not met by the runtime environment
-                session["dirty"] = True
+            self._register_session_dependency(python_package, session, path, force=force)
         else:
+            guard_path = get_guard_path(path, python_package)
+            force = force or needs_reassert(path, python_package)
             if not os.path.exists(guard_path):
                 item = python_package
                 if item == "partcad":
@@ -650,7 +681,7 @@ class PythonRuntime(runtime.Runtime):
                             "install",
                             *self.pip_install_flags,
                             *self.get_constraints_flags(),
-                            *(FORCE_REINSTALL_FLAGS if force else []),
+                            *get_force_reinstall_flags(python_package, force),
                             python_package,
                         ],
                         path=path,
@@ -668,15 +699,11 @@ class PythonRuntime(runtime.Runtime):
             path = self.path
 
         # TODO(clairbee): expire the guard file after a certain time
-        guard_path = get_guard_path(path, python_package)
-        force = force or needs_reassert(path, python_package)
         if session:
-            # Add the dependency to the session dependencies
-            session["deps"].append(python_package)
-            if not os.path.exists(guard_path):
-                # Mark this session as needed if the dependency is not met by the runtime environment
-                session["dirty"] = True
+            self._register_session_dependency(python_package, session, path, force=force)
         else:
+            guard_path = get_guard_path(path, python_package)
+            force = force or needs_reassert(path, python_package)
             async with self.async_lock():
                 with self.sync_lock_install():
                     if not os.path.exists(guard_path):
@@ -694,7 +721,7 @@ class PythonRuntime(runtime.Runtime):
                                     "install",
                                     *self.pip_install_flags,
                                     *self.get_constraints_flags(),
-                                    *(FORCE_REINSTALL_FLAGS if force else []),
+                                    *get_force_reinstall_flags(python_package, force),
                                     python_package,
                                 ],
                                 path=path,
@@ -710,15 +737,11 @@ class PythonRuntime(runtime.Runtime):
 
         # TODO(clairbee): expire the guard file after a certain time
 
-        guard_path = get_guard_path(path, python_package)
-        force = force or needs_reassert(path, python_package)
         if session:
-            # Add the dependency to the session dependencies
-            session["deps"].append(python_package)
-            if not os.path.exists(guard_path):
-                # Mark this session as needed if the dependency is not met by the runtime environment
-                session["dirty"] = True
+            self._register_session_dependency(python_package, session, path, force=force)
         else:
+            guard_path = get_guard_path(path, python_package)
+            force = force or needs_reassert(path, python_package)
             if not os.path.exists(guard_path):
                 item = python_package
                 if item == "partcad":
@@ -734,7 +757,7 @@ class PythonRuntime(runtime.Runtime):
                             "install",
                             *self.pip_install_flags,
                             *self.get_constraints_flags(),
-                            *(FORCE_REINSTALL_FLAGS if force else []),
+                            *get_force_reinstall_flags(python_package, force),
                             python_package,
                         ],
                         path=path,
@@ -792,7 +815,7 @@ class PythonRuntime(runtime.Runtime):
         use_venv = False
 
         if path is None:
-            if session is None or not session["dirty"]:
+            if session is None or not session.get("use_venv", session["dirty"]):
                 # Use the full interpreter path if known
                 if not self.exec_path is None:
                     return self.exec_path
@@ -826,6 +849,7 @@ class PythonRuntime(runtime.Runtime):
             "name": name,
             "hash": name_hash,
             "path": venv_path,
+            "use_venv": os.path.exists(venv_path),
             "dirty": False,
             "deps": [],
         }

@@ -26,6 +26,68 @@ sys.path.append(os.path.dirname(__file__))
 import wrapper_common
 
 
+def _wrap_render_shape(wrapped):
+    """Return a build123d wrapper that matches the supplied OCCT topology."""
+    return b3d.Compound.cast(wrapped)
+
+
+def _project_render_shape(shape, viewport_origin, viewport_up):
+    """Project an OCCT shape without passing a multi-body compound to HLR.
+
+    OCCT's hidden-line removal can terminate the interpreter for some valid
+    heterogeneous assembly compounds. Assemblies therefore use one common
+    view plane and combine independently projected leaf edges. Inter-component
+    occlusion is intentionally not inferred; preserving a reproducible render
+    is preferable to a native crash.
+    """
+    look_at = shape.center()
+
+    def count_leaves(item):
+        if isinstance(item, b3d.Compound):
+            return sum(count_leaves(child) for child in item)
+        return 1
+
+    # STEP parts are often wrapped in one or more single-child compounds. Keep
+    # normal face-aware HLR for those; the edge-only fallback is specifically
+    # for compounds that actually contain multiple assembly leaves.
+    is_assembly = isinstance(shape, b3d.Compound) and count_leaves(shape) > 1
+
+    def project_leaf(item):
+        if isinstance(item, b3d.Compound):
+            visible = []
+            hidden = []
+            for child in item:
+                child_visible, child_hidden = project_leaf(child)
+                visible.extend(child_visible)
+                hidden.extend(child_hidden)
+            return visible, hidden
+
+        # Some transformed solids trigger a native OCCT HLR crash only after
+        # they are placed in a larger assembly. Assembly rendering does not
+        # infer inter-component occlusion, so project the exact topological
+        # edges instead of submitting the solid's faces to hidden-line removal.
+        # This keeps positions and outlines exact without mutating geometry.
+        if is_assembly:
+            edges = list(item.edges())
+            if not edges:
+                # Mesh-backed children can lose their explicit edge topology
+                # after an assembly placement. Rebuild it through the same STL
+                # normalization used for standalone triangulation-only shapes.
+                normalized = _wrap_render_shape(_normalize_mesh(item.wrapped))
+                edges = list(normalized.edges())
+            projected_item = b3d.Compound(children=edges)
+        else:
+            projected_item = item
+        result = projected_item.project_to_viewport(
+            viewport_origin=viewport_origin,
+            viewport_up=viewport_up,
+            look_at=look_at,
+        )
+        return result
+
+    return project_leaf(shape)
+
+
 def _normalize_mesh(shape):
     """Round-trip a triangulation-only shape (e.g. an SDF mesh) through STL.
 
@@ -65,12 +127,17 @@ def process(path, request):
         if request.get("normalize_mesh"):
             wrapped = _normalize_mesh(wrapped)
 
-        b3d_obj = b3d.Solid.make_box(1, 1, 1)
-        b3d_obj.wrapped = wrapped
+        # Preserve the actual OCCT topology. Assigning a compound (the normal
+        # representation of an assembly) to a Solid wrapper can make OCCT
+        # segfault in project_to_viewport for larger multi-body assemblies.
+        # Compound.cast dispatches solids, compounds, faces, and the other
+        # supported TopoDS variants to the matching build123d wrapper.
+        b3d_obj = _wrap_render_shape(wrapped)
 
         viewport_origin = tuple(request.get("viewport_origin"))
         viewport_up = tuple(request.get("viewport_up", [0, 0, 1]))
-        visible, hidden = b3d_obj.project_to_viewport(
+        visible, hidden = _project_render_shape(
+            b3d_obj,
             viewport_origin=viewport_origin,
             viewport_up=viewport_up,
         )

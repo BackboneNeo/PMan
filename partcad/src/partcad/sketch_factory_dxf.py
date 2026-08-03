@@ -82,8 +82,9 @@ class SketchFactoryDxf(SketchFactoryPython):
                 request["label"] = sketch.name
                 request_serialized = ocp_serialize.serialize(request)
 
+                for requirement in sandbox_versions.CADQUERY_REQUIREMENTS:
+                    await self.runtime.ensure_async(requirement)
                 await self.runtime.ensure_async(sandbox_versions.CADQUERY_OCP)
-                await self.runtime.ensure_async(sandbox_versions.CADQUERY)
                 command = [
                     wrapper_path,
                     os.path.abspath(self.path),

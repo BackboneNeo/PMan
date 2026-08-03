@@ -4,6 +4,8 @@ name: npm test
 
 on:
   pull_request:
+    paths:
+      - partcad-ide-vscode/**
   workflow_dispatch:
   push:
     branches:

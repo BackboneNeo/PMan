@@ -5,6 +5,8 @@
 # Licensed under Apache License, Version 2.0.
 #
 
+import re
+
 import pytest
 
 from partcad import sandbox_versions
@@ -39,10 +41,24 @@ def test_cad_pins_are_exact():
         sandbox_versions.CADQUERY_OCP,
         sandbox_versions.OCPSVG,
         sandbox_versions.BUILD123D,
-        sandbox_versions.CADQUERY,
         sandbox_versions.OCP_TESSELLATE,
+        *sandbox_versions.CADQUERY_IMPORT_DEPENDENCIES,
     ):
         assert "==" in pin, pin
+
+    assert re.search(r"@[0-9a-f]{40}$", sandbox_versions.CADQUERY), sandbox_versions.CADQUERY
+
+
+def test_cadquery_requirements_include_clean_conda_import_closure():
+    """A git CadQuery install in conda omits its own install_requires."""
+    assert sandbox_versions.CADQUERY_REQUIREMENTS == (
+        "runtype==0.5.3",
+        "multimethod==1.12",
+        "casadi==3.7.2",
+        "vtk==9.6.2",
+        "ezdxf==1.4.4",
+        sandbox_versions.CADQUERY,
+    )
 
 
 def test_default_python_version_is_supported():

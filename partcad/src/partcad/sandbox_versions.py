@@ -24,7 +24,30 @@ with no Python traceback at all (see runtime_python.PIP_CONSTRAINTS).
 CADQUERY_OCP = "cadquery-ocp==7.9.3.1.1"
 OCPSVG = "ocpsvg==0.6.0"
 BUILD123D = "build123d==0.11.1"
-CADQUERY = "cadquery==2.8.0"
+EZDXF = "ezdxf==1.4.4"
+VTK = "vtk==9.6.2"
+# PMan downstream compatibility pin: CadQuery v2.8.0 exists upstream but is not
+# published to the configured package index. Install that exact official tag
+# commit so the intended Python 3.11 / OCP 7.9 contract remains unchanged.
+CADQUERY = (
+    "cadquery @ git+https://github.com/CadQuery/cadquery.git"
+    "@fb4c6d41863aee270c46ab64397f0d2675e74be0"
+)
+# CadQuery's setup.py deliberately emits no install_requires while running in
+# a conda environment. PartCAD uses a lightweight conda sandbox and installs
+# CadQuery with pip, so a clean sandbox otherwise gets the package without the
+# dependencies required by ``import cadquery``. Keep that import closure
+# explicit and exact; optional visualization/NURBS dependencies remain lazy.
+CADQUERY_IMPORT_DEPENDENCIES = (
+    "runtype==0.5.3",
+    "multimethod==1.12",
+    "casadi==3.7.2",
+    # cadquery-ocp declares this transitively, but a per-package venv can be
+    # populated from already-satisfied base guards and miss vtkmodules.
+    VTK,
+    EZDXF,
+)
+CADQUERY_REQUIREMENTS = (*CADQUERY_IMPORT_DEPENDENCIES, CADQUERY)
 OCP_TESSELLATE = "ocp-tessellate==3.4.1"
 TYPING_EXTENSIONS = "typing_extensions==4.16.0"
 NLOPT = "nlopt==2.11.0"
@@ -51,7 +74,6 @@ SVGLIB = "svglib==1.5.1"
 REPORTLAB = "reportlab==4.4.3"
 RLPYCAIRO = "rlpycairo==0.3.0"
 SVGPATHTOOLS = "svgpathtools==1.7.2"
-EZDXF = "ezdxf==1.4.4"
 
 # Installing a package on the left overwrites files owned by the packages on
 # the right, so those have to be installed again afterwards -- forcibly, since
@@ -74,7 +96,7 @@ GUARD_INVALIDATED_BY = {
 # One step ahead of the minimum PartCAD itself supports.
 DEFAULT_PYTHON_VERSION = "3.11"
 
-# cadquery 2.8 requires Python 3.11 or newer, so a package that asks for 3.10
+# CadQuery 2.8 requires Python 3.11 or newer, so a package that asks for 3.10
 # still has to be rendered on 3.11.
 MIN_PYTHON_VERSION_CADQUERY = "3.11"
 

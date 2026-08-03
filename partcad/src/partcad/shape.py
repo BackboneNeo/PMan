@@ -684,7 +684,7 @@ class Shape(ShapeConfiguration):
             "step": [sandbox_versions.CADQUERY_OCP],
             "stl": [sandbox_versions.CADQUERY_OCP],
             "obj": [sandbox_versions.CADQUERY_OCP],
-            "3mf": [sandbox_versions.CADQUERY_OCP, sandbox_versions.CADQUERY],
+            "3mf": [*sandbox_versions.CADQUERY_REQUIREMENTS, sandbox_versions.CADQUERY_OCP],
             "gltf": [sandbox_versions.BUILD123D, sandbox_versions.CADQUERY_OCP],
             "iges": [sandbox_versions.CADQUERY_OCP],
             "threejs": [sandbox_versions.CADQUERY_OCP],

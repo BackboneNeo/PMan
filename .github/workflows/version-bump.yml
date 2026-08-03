@@ -10,6 +10,7 @@ jobs:
     # image (ubuntu-26.04 is preview only), so this stays pinned.
     runs-on: ubuntu-24.04
     if: |
+      github.repository == 'partcad/partcad' &&
       !startsWith(github.event.head_commit.message, '[SKIP]') &&
       !startsWith(github.event.head_commit.message, 'Version updated')
     environment:

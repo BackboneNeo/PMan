@@ -1,0 +1,87 @@
+name: PMan Governance
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate downstream governance and release guards
+        shell: python
+        run: |
+          import json
+          import pathlib
+          import re
+
+          required = [
+              "VERSION",
+              "README.md",
+              "AGENTS.md",
+              "CHANGELOG.md",
+              "CONTRIBUTING.md",
+              "SECURITY.md",
+              ".backbone/repository.json",
+              ".github/CODEOWNERS",
+              ".github/PULL_REQUEST_TEMPLATE.md",
+              "docs/downstream/UPSTREAM.md",
+          ]
+          missing = [path for path in required if not pathlib.Path(path).is_file()]
+          if missing:
+              raise SystemExit(f"Missing required files: {missing}")
+
+          version = pathlib.Path("VERSION").read_text(encoding="utf-8").strip()
+          if not re.fullmatch(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?", version):
+              raise SystemExit(f"Invalid VERSION: {version}")
+
+          metadata = json.loads(pathlib.Path(".backbone/repository.json").read_text(encoding="utf-8"))
+          expected = {
+              "schemaVersion": 2,
+              "organization": "BackboneNeo",
+              "repository": "PMan",
+              "role": "cad-platform",
+              "version": version,
+          }
+          for key, value in expected.items():
+              if metadata.get(key) != value:
+                  raise SystemExit(f"Invalid repository metadata {key}: {metadata.get(key)!r}")
+
+          pin = "137ff5b17d0d5dbd12b4f287b59c34a8a484fedd"
+          upstream = pathlib.Path("docs/downstream/UPSTREAM.md").read_text(encoding="utf-8")
+          if pin not in upstream:
+              raise SystemExit("Pinned upstream commit is missing")
+
+          sandbox_versions = pathlib.Path(
+              "partcad/src/partcad/sandbox_versions.py"
+          ).read_text(encoding="utf-8")
+          compatibility_pin = "fb4c6d41863aee270c46ab64397f0d2675e74be0"
+          if compatibility_pin not in sandbox_versions or compatibility_pin not in upstream:
+              raise SystemExit("Temporary CadQuery compatibility pin is not documented")
+
+          guarded = {
+              ".github/workflows/ai-agents-release.yml": 1,
+              ".github/workflows/deploy.yml": 3,
+              ".github/workflows/version-bump.yml": 1,
+              ".github/workflows/test-dev.yml": 1,
+          }
+          guard = "github.repository == 'partcad/partcad'"
+          for path, minimum_count in guarded.items():
+              count = pathlib.Path(path).read_text(encoding="utf-8").count(guard)
+              if count < minimum_count:
+                  raise SystemExit(
+                      f"Missing upstream-only publication guard(s): "
+                      f"{path} has {count}, expected at least {minimum_count}"
+                  )
+
+          print(f"PMan downstream governance passed for {version}")

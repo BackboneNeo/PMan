@@ -92,10 +92,11 @@ class SketchFactoryCadquery(SketchFactoryPython):
                 sandbox_versions.NLOPT,
                 session=self.session,
             )
-            await self.runtime.ensure_async(
-                sandbox_versions.CADQUERY,
-                session=self.session,
-            )
+            for requirement in sandbox_versions.CADQUERY_REQUIREMENTS:
+                await self.runtime.ensure_async(
+                    requirement,
+                    session=self.session,
+                )
             await self.runtime.ensure_async(
                 sandbox_versions.CADQUERY_OCP,
                 session=self.session,
